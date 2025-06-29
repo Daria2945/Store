@@ -46,37 +46,19 @@ namespace Store
 
     public class Warehouse
     {
-        private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
+        private GoodCollection _goods = new GoodCollection();
+
+        public void ShowAllGoods() =>
+            _goods.ShowAll();
 
         public void Delive(Good good, int count)
         {
-            if (good == null)
-                throw new ArgumentNullException(nameof(good));
-
-            if (count <= 0)
-                throw new ArgumentOutOfRangeException(nameof(count));
-
             _goods.Add(good, count);
         }
 
         public void TakeGoods(Good good, int count)
         {
-            if (good == null)
-                throw new ArgumentNullException(nameof(good));
-
-            if (count <= 0)
-                throw new ArgumentOutOfRangeException(nameof(count));
-
-            if (_goods.ContainsKey(good) == false)
-                throw new ArgumentException("Данного товара нет на складе", nameof(good));
-
-            if (_goods[good] < count)
-                throw new ArgumentException("Нет нужного количества товара на складе", nameof(count));
-
-            _goods[good] -= count;
-
-            if (_goods[good] == 0)
-                _goods.Remove(good);
+            _goods.Take(good, count);
         }
     }
 
@@ -99,7 +81,7 @@ namespace Store
     public class Cart
     {
         private Warehouse _warehouse;
-        private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
+        private GoodCollection _goods = new GoodCollection();
 
         public Cart(Warehouse warehouse)
         {
@@ -111,12 +93,6 @@ namespace Store
 
         public void Add(Good good, int count)
         {
-            if (good == null)
-                throw new ArgumentNullException(nameof(good));
-
-            if (count <= 0)
-                throw new ArgumentOutOfRangeException(nameof(count));
-
             _warehouse.TakeGoods(good, count);
             _goods.Add(good, count);
         }
@@ -132,5 +108,68 @@ namespace Store
     public class Order
     {
         public string Paylink { get; } = "123";
+    }
+
+    public class GoodCollection
+    {
+        private Dictionary<Good, int> _goods = new Dictionary<Good, int>();
+
+        public void ShowAll()
+        {
+            foreach (var good in _goods)
+            {
+                Console.WriteLine($"Название: {good.Key.Name}/ Количество: {good.Value}");
+            }
+        }
+
+        public void Add(Good good, int count)
+        {
+            TryReportIncorrectData(good, count);
+
+            if (_goods.ContainsKey(good) == false)
+                _goods.Add(good, count);
+            else
+                IncreaseGoodCount(good, count);
+        }
+
+        public void Take(Good good, int count)
+        {
+            TryReportIncorrectData(good, count);
+            TryReportGoodUnavailability(good);
+
+            if (_goods[good] < count)
+                throw new ArgumentException("Нет нужного количества товара на складе", nameof(count));
+
+            _goods[good] -= count;
+
+            if (_goods[good] == 0)
+                _goods.Remove(good);
+        }
+
+        public void Clear() =>
+            _goods.Clear();
+
+        private void IncreaseGoodCount(Good good, int count)
+        {
+            TryReportIncorrectData(good, count);
+            TryReportGoodUnavailability(good);
+
+            _goods[good] += count;
+        }
+
+        private void TryReportIncorrectData(Good good, int count)
+        {
+            if (good == null)
+                throw new ArgumentNullException(nameof(good));
+
+            if (count <= 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        private void TryReportGoodUnavailability(Good good)
+        {
+            if (_goods.ContainsKey(good) == false)
+                throw new ArgumentException("Данного товара нет на складе", nameof(good));
+        }
     }
 }
